@@ -3,7 +3,7 @@ Aplicação desktop desenvolvida utilizando **Electron**, **Node.js**, **WebSock
 
 
 ## Descrição
-Projeto com objetivo de criar uma aplicação desktop de comunicação em tempo real via WebSocket.
+Projeto com objetivo de criar uma aplicação desktop de comunicação em tempo real via WebSocket. O aplicativo inclui autenticação via login, um feed de noticias recebido por WebSocket e um leitor de texto básico com controle de volume (Text-to-Speech). 
 
 
 ## 1. Tecnologias Utilizadas
@@ -43,14 +43,14 @@ npm start
 ## 4. Download e instalação
 - 4.1 (Adicionar)
 
-## 5. Controle de Versões
+## 5. Acessos
+- Login: user
+- Password: pass123
+
+## 6. Controle de Versões
 - **v0.1**: Versão inicial funcional.
 
-## 6. Screenshots
+## 7. Screenshots
 
-- 6.1 Tela Principal
+- 7.1 Tela Principal
 ![Tela Principal](./screenshots/tela-principal.png)
-
-
-![Node.js](https://img.shields.io/badge/Node.js-18.x-green)
-![Electron](https://img.shields.io/badge/Electron-24.x-blue)
