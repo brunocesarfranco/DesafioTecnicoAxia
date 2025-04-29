@@ -1,0 +1,43 @@
+{
+  "name": "desafiotecnicoaxia",
+  "version": "1.0.0",
+  "main": "main.js",
+  "description": "Um aplicativo desktop para feed de notícias e gráficos de PnL",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brunocesarfranco/DesafioTecnicoAxia.git"
+  },
+  "keywords": [],
+  "author": "brunocesarfranco",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/brunocesarfranco/DesafioTecnicoAxia/issues"
+  },
+  "homepage": "https://github.com/brunocesarfranco/DesafioTecnicoAxia#readme",
+  "devDependencies": {
+    "electron": "^36.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.brunocesarfranco.desafiotecnicoaxia",
+    "productName": "Desafio Tecnico Axia",
+    "files": [
+      "main.js",
+      "index.html",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

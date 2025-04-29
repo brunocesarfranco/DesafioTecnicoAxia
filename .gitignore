@@ -1,0 +1,69 @@
+# Dependências do Node
+node_modules/
+.npm
+.pnpm
+.yarn-integrity
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+# Diretórios de build/output
+dist/
+distwin-unpacked/
+out/
+release-builds/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Electron
+app/node_modules/
+app/dist/
+app/out/
+app/release-builds/
+
+# Cache/artefatos temporários
+.cache/
+.temp/
+.tmp/
+.DS_Store
+*.swp
+*.swo
+
+# IDE/Editor
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Arquivos do sistema operacional
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Testes/cobertura
+coverage/
+.nyc_output/
+
+# Pacotes
+*.tgz
+*.pkg
+
+# Debug
+*.log
+logs/
