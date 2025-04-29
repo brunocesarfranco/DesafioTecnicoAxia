@@ -23,7 +23,7 @@ dist/
 distwin-unpacked/
 out/
 release-builds/
-*.exe
+# *.exe
 *.dll
 *.so
 *.dylib

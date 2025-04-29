@@ -18,6 +18,7 @@ const loginError = document.getElementById('loginError');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
+const pingDot = document.getElementById('pingDot');
 const pingValue = document.getElementById('pingValue');
 const pnlChartCanvas = document.getElementById('pnlChart');
 const themeToggle = document.getElementById('themeToggle');
@@ -26,7 +27,7 @@ const themeToggle = document.getElementById('themeToggle');
 let chartInstance = null;
 let chartData = null;
 let utterance = null;
-let currentVolume = 1;
+let currentVolume = parseFloat(localStorage.getItem('volume')) || 0.7;
 let socket = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -36,6 +37,11 @@ let currentCharIndex = 0;
 let currentText = '';
 let isSpeaking = false;
 let speechQueue = [];
+let isPaused = false;
+
+// Inicialização do volume
+volumeControl.value = currentVolume;
+volumeValue.textContent = `${Math.round(currentVolume * 100)}%`;
 
 // Alternância de Tema
 function loadTheme() {
@@ -63,10 +69,13 @@ loadTheme();
 
 // Alternância de visibilidade da senha
 togglePassword.addEventListener('click', () => {
-  const isPassword = passwordInput.type === 'password';
-  passwordInput.type = isPassword ? 'text' : 'password';
-  togglePassword.textContent = isPassword ? '🙈' : '👁️';
-});
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+    
+    // Altera o ícone conforme o estado da senha
+    const iconPath = isPassword ? 'assets/images/olho-aberto.png' : 'assets/images/olho-fechado.png';
+    togglePassword.innerHTML = `<img src="${iconPath}" alt="${isPassword ? 'Mostrar senha' : 'Ocultar senha'}">`;
+  });
 
 // Manipulador de Login
 loginForm.addEventListener('submit', async (e) => {
@@ -102,7 +111,7 @@ loginForm.addEventListener('submit', async (e) => {
     }
   } catch (error) {
     console.error('Erro de login:', error);
-    showError('Erro de conexão. Tente novamente.');
+    showError('Credenciais inválidas, tente novamente.');
   } finally {
     loadingIndicator.style.display = 'none';
     loginButton.disabled = false;
@@ -151,7 +160,7 @@ function iniciarWebSocket() {
             const source = newsItem.source || "Fonte desconhecida";
             const texto = newsItem.important ? "URGENT: " + newsItem.headline : newsItem.headline;
             const formattedMessage = `${source}: ${texto}`;
-            adicionarMensagem(formattedMessage, newsItem.important, texto);
+            adicionarMensagem(formattedMessage, newsItem.important, texto, newsItem);
             falarTexto(texto);
           }
         });
@@ -193,13 +202,16 @@ function startPingMonitor() {
         const ping = Date.now() - lastPingTime;
         pingValue.textContent = `${ping} ms`;
         if (ping < 80) {
-          statusDot.style.backgroundColor = 'var(--success-color)';
+          pingDot.className = 'status-dot connected';
         } else if (ping < 150) {
-          statusDot.style.backgroundColor = 'var(--warning-color)';
+          pingDot.className = 'status-dot warning';
         } else {
-          statusDot.style.backgroundColor = 'var(--danger-color)';
+          pingDot.className = 'status-dot';
         }
       }, 500);
+    } else {
+      pingDot.className = 'status-dot';
+      pingValue.textContent = '-- ms';
     }
   }, 3000);
 }
@@ -211,24 +223,30 @@ function updateConnectionStatus(connected) {
   } else {
     statusDot.className = 'status-dot';
     statusText.textContent = 'Desconectado';
+    pingDot.className = 'status-dot';
     pingValue.textContent = '-- ms';
   }
 }
 
 // Exibição de mensagens de notícias
-function adicionarMensagem(texto, isUrgent = false, textoParaFala = '') {
+function adicionarMensagem(texto, isUrgent = false, textoParaFala = '', newsItem = {}) {
   const sourceEnd = texto.indexOf(':');
   const source = texto.substring(0, sourceEnd);
   const message = texto.substring(sourceEnd + 2);
   
-  const newsItem = document.createElement('div');
-  newsItem.className = `news-item ${isUrgent ? 'urgent' : ''}`;
-  newsItem.setAttribute('data-text', textoParaFala);
+  const newsItemEl = document.createElement('div');
+  newsItemEl.className = `news-item ${isUrgent ? 'urgent' : ''}`;
+  newsItemEl.setAttribute('data-text', textoParaFala);
   
   const sourceEl = document.createElement('div');
   sourceEl.className = 'news-source';
   sourceEl.textContent = source;
   
+  const dateEl = document.createElement('div');
+  dateEl.className = 'news-date';
+  const date = newsItem.timestamp ? new Date(newsItem.timestamp) : new Date();
+  const formattedDate = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${Math.floor(date.getMilliseconds() / 10).toString().padStart(2, '0')}  -  ${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  dateEl.textContent = formattedDate;
   const textEl = document.createElement('div');
   textEl.className = 'news-text';
   textEl.textContent = message;
@@ -237,19 +255,19 @@ function adicionarMensagem(texto, isUrgent = false, textoParaFala = '') {
   playBtn.className = 'news-play-btn';
   playBtn.textContent = '▶️';
   playBtn.addEventListener('click', () => {
-    const textToSpeak = newsItem.getAttribute('data-text');
+    const textToSpeak = newsItemEl.getAttribute('data-text');
     if (textToSpeak) {
       falarTexto(textToSpeak);
     }
   });
   
-  newsItem.appendChild(sourceEl);
-  newsItem.appendChild(textEl);
-  newsItem.appendChild(playBtn);
-  mensagensDiv.appendChild(newsItem);
+  newsItemEl.appendChild(sourceEl);
+  newsItemEl.appendChild(dateEl);
+  newsItemEl.appendChild(textEl);
+  newsItemEl.appendChild(playBtn);
+  mensagensDiv.appendChild(newsItemEl);
   mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
 
-  // Ocultar placeholder quando há mensagens
   if (mensagensDiv.children.length > 1) {
     newsPlaceholder.style.display = 'none';
   } else {
@@ -257,11 +275,14 @@ function adicionarMensagem(texto, isUrgent = false, textoParaFala = '') {
   }
 }
 
-// Síntese de Voz
+// Fluxo TTS
 function falarTexto(texto) {
-  if (!('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window)) {
+    console.warn('Síntese de voz não suportada neste navegador');
+    return;
+  }
 
-  if (isSpeaking) {
+  if (isSpeaking || isPaused) {
     speechQueue.push(texto);
     return;
   }
@@ -270,36 +291,37 @@ function falarTexto(texto) {
 }
 
 function speakNow(texto) {
-  if (utterance && speechSynthesis.speaking) {
+  if (utterance) {
     speechSynthesis.cancel();
   }
 
   currentText = texto;
   currentCharIndex = 0;
   isSpeaking = true;
+  isPaused = false;
+  
   utterance = new SpeechSynthesisUtterance(texto);
   utterance.volume = currentVolume;
-  utterance.lang = 'en-US';
+  utterance.lang = 'en-US'; // Define a nacionalidade da locução
   
-  // Rastrear posição da fala
   utterance.onboundary = (event) => {
     if (event.name === 'word' || event.name === 'sentence') {
-      currentCharIndex = event.charIndex || currentCharIndex;
+      currentCharIndex = event.charIndex;
     }
   };
 
-  pauseButton.disabled = false;
-  resumeButton.disabled = true;
-  stopButton.disabled = false;
+  updateSpeechControls();
 
-  utterance.onend = utterance.onerror = () => {
-    pauseButton.disabled = true;
-    resumeButton.disabled = true;
-    stopButton.disabled = true;
+  utterance.onend = utterance.onerror = (event) => {
+    if (event.type === 'error') {
+      console.error('Erro na síntese de voz:', event.error);
+    }
+    isSpeaking = false;
+    isPaused = false;
     utterance = null;
     currentText = '';
     currentCharIndex = 0;
-    isSpeaking = false;
+    updateSpeechControls();
     processSpeechQueue();
   };
 
@@ -307,77 +329,67 @@ function speakNow(texto) {
 }
 
 function processSpeechQueue() {
-  if (speechQueue.length > 0 && !isSpeaking) {
+  if (speechQueue.length > 0 && !isSpeaking && !isPaused) {
     const nextText = speechQueue.shift();
     speakNow(nextText);
   }
 }
 
-// Controle de volume com atualização instantânea
+function updateSpeechControls() {
+  pauseButton.disabled = !isSpeaking || isPaused;
+  resumeButton.disabled = !isPaused;
+  stopButton.disabled = !isSpeaking && !isPaused;
+}
+
+// Controle de volume
+let volumeDebounce;
 volumeControl.addEventListener('input', (e) => {
-  currentVolume = parseFloat(e.target.value);
-  volumeValue.textContent = `${Math.round(currentVolume * 100)}%`;
-  if (utterance && speechSynthesis.speaking && !speechSynthesis.paused) {
-    speechSynthesis.pause();
-    speechSynthesis.cancel();
-    const remainingText = currentText.substring(currentCharIndex);
-    if (remainingText) {
-      utterance = new SpeechSynthesisUtterance(remainingText);
+  clearTimeout(volumeDebounce);
+  volumeDebounce = setTimeout(() => {
+    currentVolume = parseFloat(e.target.value);
+    volumeValue.textContent = `${Math.round(currentVolume * 100)}%`;
+    localStorage.setItem('volume', currentVolume);
+    
+    if (utterance) {
       utterance.volume = currentVolume;
-      utterance.lang = 'en-US';
-      utterance.onboundary = (event) => {
-        if (event.name === 'word' || event.name === 'sentence') {
-          currentCharIndex = event.charIndex || currentCharIndex;
-        }
-      };
-      utterance.onend = utterance.onerror = () => {
-        pauseButton.disabled = true;
-        resumeButton.disabled = true;
-        stopButton.disabled = true;
-        utterance = null;
-        currentText = '';
-        currentCharIndex = 0;
-        isSpeaking = false;
-        processSpeechQueue();
-      };
-      speechSynthesis.speak(utterance);
-    } else {
-      isSpeaking = false;
-      processSpeechQueue();
     }
-  } else if (utterance) {
-    utterance.volume = currentVolume;
-  }
+    
+    if (isSpeaking && !isPaused) {
+      const remainingText = currentText.substring(currentCharIndex);
+      if (remainingText) {
+        speechSynthesis.cancel();
+        speakNow(remainingText);
+      }
+    }
+  }, 300);
 });
 
 // Controles de voz
 pauseButton.addEventListener('click', () => {
-  if (speechSynthesis.speaking && !speechSynthesis.paused) {
+  if (isSpeaking && !isPaused) {
     speechSynthesis.pause();
-    pauseButton.disabled = true;
-    resumeButton.disabled = false;
+    isPaused = true;
+    updateSpeechControls();
   }
 });
 
 resumeButton.addEventListener('click', () => {
-  if (speechSynthesis.paused) {
+  if (isPaused) {
     speechSynthesis.resume();
-    resumeButton.disabled = true;
-    pauseButton.disabled = false;
+    isPaused = false;
+    updateSpeechControls();
   }
 });
 
 stopButton.addEventListener('click', () => {
   speechSynthesis.cancel();
+  isSpeaking = false;
+  isPaused = false;
   utterance = null;
   currentText = '';
   currentCharIndex = 0;
-  isSpeaking = false;
-  speechQueue = []; // Limpar fila ao parar
-  pauseButton.disabled = true;
-  resumeButton.disabled = true;
-  stopButton.disabled = true;
-  processSpeechQueue();
+  speechQueue = [];
+  updateSpeechControls();
 });
 
 // Atualização do gráfico
@@ -394,12 +406,13 @@ function atualizarGrafico(data) {
 
   products.sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl));
 
-  console.log('Dados do Gráfico:', products);
-
   const ctx = pnlChartCanvas.getContext('2d');
   const labels = products.map(p => p.symbol);
   const pnls = products.map(p => p.pnl);
-  const backgroundColors = pnls.map(pnl => pnl >= 0 ? getComputedStyle(document.documentElement).getPropertyValue('--success-color').trim() : getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim());
+  const backgroundColors = pnls.map(pnl => 
+    pnl >= 0 ? getComputedStyle(document.documentElement).getPropertyValue('--success-color').trim() 
+              : getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim()
+  );
   const borderColors = backgroundColors;
 
   // Atualizar lista
@@ -426,9 +439,6 @@ function atualizarGrafico(data) {
     chartInstance.destroy();
   }
 
-  pnlChartCanvas.width = 800;
-  pnlChartCanvas.height = 400;
-
   chartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -442,8 +452,8 @@ function atualizarGrafico(data) {
       }]
     },
     options: {
-      responsive: false,
-      maintainAspectRatio: false,
+      responsive: true, // Ativar redimensionamento responsivo
+      maintainAspectRatio: false, // Permitir que o gráfico ajuste sua proporção
       scales: {
         x: {
           title: { 
@@ -492,16 +502,11 @@ function atualizarGrafico(data) {
   });
 }
 
-// Manipular redimensionamento da janela sem perder dados do gráfico
+// Manipular redimensionamento da janela
 window.addEventListener('resize', () => {
   if (pnlChartCanvas && chartInstance) {
-    console.log('Redimensionando gráfico...');
-    pnlChartCanvas.width = 800;
-    pnlChartCanvas.height = 400;
-    chartInstance.resize(800, 400);
-    if (chartData) {
-      atualizarGrafico(chartData);
-    }
+    // Não é necessário ajustar width e height manualmente, pois responsive: true cuidará disso
+    chartInstance.resize();
   }
 });
 
