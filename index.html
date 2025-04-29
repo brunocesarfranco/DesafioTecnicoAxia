@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed de Noticias</title>
+  <script src="./assets/chart.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1, h2 { text-align: center; color: #333; }
+    form, #controles, #mensagens, #chartContainer, #pnlListContainer {
+      background: #fff;
+      padding: 20px;
+      margin: 20px auto;
+      border-radius: 8px;
+      max-width: 400px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    form { display: flex; flex-direction: column; gap: 10px; }
+    input[type="text"], input[type="password"], input[type="range"] {
+      padding: 10px; border: 1px solid #ccc; border-radius: 4px;
+    }
+    button {
+      padding: 10px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background-color: #45a049; }
+    #mensagens { height: 300px; overflow-y: auto; }
+    .mensagem { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; white-space: pre-line; }
+    #chartContainer { max-width: 1200px; }
+    canvas { margin-top: 20px; }
+    .controls-group { display: flex; justify-content: space-around; margin-top: 10px; }
+    label { font-weight: bold; }
+    #pnlListContainer { max-width: 1200px; }
+    #pnlList { list-style: none; padding: 0; margin-top: 20px; }
+    #pnlList li { padding: 5px 0; font-size: 14px; }
+    #pnlList li span { font-weight: bold; }
+  </style>
+</head>
+
+<body>
+  <div id="loginDiv">
+    <h1>Login</h1>
+    <form id="loginForm">
+      <label for="username">Usuário:</label>
+      <input type="text" id="username" required>
+
+      <label for="password">Senha:</label>
+      <input type="password" id="password" required>
+
+      <button type="submit">Entrar</button>
+    </form>
+  </div>
+
+  <div id="feedDiv" style="display: none;">
+    <h1>Feed de Noticias</h1>
+
+    <div id="mensagens"></div>
+
+    <div id="controles">
+      <h2>Controles de Leitura</h2>
+
+      <label for="volumeControl">Volume: <span id="volumeValue">100%</span></label>
+      <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="1">
+
+      <div class="controls-group">
+        <button id="pauseButton">Pausar</button>
+        <button id="resumeButton">Continuar</button>
+        <button id="stopButton">Parar</button>
+      </div>
+    </div>
+
+    <div id="chartContainer">
+      <h2>Gráfico de PnL (Profit and Loss)</h2>
+      <canvas id="pnlChart"></canvas>
+    </div>
+
+    <div id="pnlListContainer">
+      <h2>Valores de PnL por Símbolo</h2>
+      <ul id="pnlList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const loginDiv = document.getElementById('loginDiv');
+    const feedDiv = document.getElementById('feedDiv');
+    const mensagensDiv = document.getElementById('mensagens');
+    const volumeControl = document.getElementById('volumeControl');
+    const volumeValue = document.getElementById('volumeValue');
+    const pauseButton = document.getElementById('pauseButton');
+    const resumeButton = document.getElementById('resumeButton');
+    const stopButton = document.getElementById('stopButton');
+    const pnlList = document.getElementById('pnlList');
+    let chartInstance = null;
+    let utterance = null;
+    let currentVolume = 1;
+    let socket = null;
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      if (!username || !password) return alert('Preencha todos os campos.');
+
+      try {
+        const response = await fetch('https://beta.axiafutures.com/api/mock-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (response.ok) {
+          alert('Login bem-sucedido!');
+          loginDiv.style.display = 'none';
+          feedDiv.style.display = 'block';
+          iniciarWebSocket();
+        } else {
+          alert('Credenciais incorretas.');
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Erro ao conectar no servidor.');
+      }
+    });
+
+    function iniciarWebSocket() {
+      socket = new WebSocket('wss://edge-api.axiafutures.com/ws/?token=U2FsdGVkX1+YcfF5A506hKmuKwlK2a4WErOATfH/Ek9GtuMmtY0FbGqnH892r4B8');
+
+      socket.addEventListener('open', () => {
+        console.log('WebSocket conectado.');
+        socket.send('ping');
+      });
+
+      socket.addEventListener('message', (event) => {
+        const data = event.data;
+
+        if (data === 'ping') {
+          socket.send('pong');
+          console.log('Ping recebido.');
+          return;
+        }
+
+        try {
+          const message = JSON.parse(data);
+
+          if (message.type === 'productGraphData' && message.content) {
+            const graphData = JSON.parse(message.content);
+            atualizarGrafico(graphData);
+            return;
+          }
+
+          if (message.type === 'message' && Array.isArray(message.content)) {
+            message.content.forEach(newsItem => {
+              if (newsItem.headline) {
+                const source = newsItem.source || "Fonte desconhecida";
+                const texto = newsItem.important ? "🚨 URGENTE: " + newsItem.headline : newsItem.headline;
+                const formattedMessage = `Fonte: "${source}"\nNotícia: ${texto}`;
+                adicionarMensagem(formattedMessage);
+                falarTexto(texto);
+              }
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Erro ao processar mensagem:', error);
+        }
+      });
+
+      socket.addEventListener('error', (error) => {
+        console.error('Erro no WebSocket:', error);
+        adicionarMensagem('Erro na conexão WebSocket.');
+      });
+
+      socket.addEventListener('close', () => {
+        console.warn('WebSocket fechado. Tentando reconectar...');
+        adicionarMensagem('WebSocket desconectado. Reconectando...');
+        setTimeout(iniciarWebSocket, 5000);
+      });
+    }
+
+    function adicionarMensagem(texto) {
+      const p = document.createElement('p');
+      p.className = 'mensagem';
+      p.textContent = texto;
+      mensagensDiv.appendChild(p);
+      mensagensDiv.scrollTop = mensagensDiv.scrollHeight;
+    }
+
+    function falarTexto(texto) {
+      if (utterance) speechSynthesis.cancel();
+
+      utterance = new SpeechSynthesisUtterance(texto);
+      utterance.volume = currentVolume;
+      utterance.lang = 'pt-BR';
+      speechSynthesis.speak(utterance);
+    }
+
+    volumeControl.addEventListener('input', (e) => {
+      currentVolume = parseFloat(e.target.value);
+      volumeValue.textContent = `${Math.round(currentVolume * 100)}%`;
+    });
+
+    pauseButton.addEventListener('click', () => {
+      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        speechSynthesis.pause();
+      }
+    });
+
+    resumeButton.addEventListener('click', () => {
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume();
+      }
+    });
+
+    stopButton.addEventListener('click', () => {
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+        utterance = null;
+      }
+    });
+
+    function atualizarGrafico(data) {
+      const products = Object.values(data).map(product => ({
+        symbol: product.symbol,
+        name: product.name,
+        pnl: product.pnl
+      }));
+
+      products.sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl));
+
+      const ctx = document.getElementById('pnlChart').getContext('2d');
+      const labels = products.map(p => p.symbol);
+      const pnls = products.map(p => p.pnl);
+      const backgroundColors = products.map(p => p.pnl >= 0 ? '#4CAF50' : '#F44336');
+
+      // Atualizar a lista de valores
+      pnlList.innerHTML = '';
+      products.forEach(product => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${product.symbol}</span>: $${product.pnl.toLocaleString('pt-BR')}`;
+        li.style.color = product.pnl >= 0 ? '#4CAF50' : '#F44336';
+        pnlList.appendChild(li);
+      });
+
+      if (chartInstance) {
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets[0].data = pnls;
+        chartInstance.data.datasets[0].backgroundColor = backgroundColors;
+        chartInstance.update();
+      } else {
+        chartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'PnL ($)',
+              data: pnls,
+              backgroundColor: backgroundColors,
+              borderColor: '#333',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              x: { title: { display: true, text: 'Símbolo' }, ticks: { maxRotation: 45, minRotation: 45 } },
+              y: { title: { display: true, text: 'PnL ($)' }, beginAtZero: true,
+                ticks: { callback: value => `$${value.toLocaleString('pt-BR')}` }
+              }
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: context => `PnL: $${context.raw.toLocaleString('pt-BR')}`
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>
