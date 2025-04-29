@@ -5,13 +5,13 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, 'assets', 'images', 'axialogo-256x256.ico'),
     webPreferences: {
-      nodeIntegration: true, // Permite o uso de Node.js no renderer (seu HTML/JS)
-      contextIsolation: false, // Desativa o isolamento de contexto (para simplificar)
+      nodeIntegration: true, // Permite o uso de Node.js no renderer
+      contextIsolation: false,
     },
   });
 
-  // Carrega o arquivo index.html
   win.loadFile('index.html');
 }
 

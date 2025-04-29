@@ -1,116 +1,119 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Desafio Técnico - Axia Futures</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafio Técnico - Axia Futures</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-  <div class="container">
-    <!-- Sidebar (visível após login) -->
-    <div class="sidebar" id="sidebar" style="display: none;">
-      <div class="logo">
-        <h1>AxiaFeed Pro</h1>
-        <span>Inteligência de Mercado em Tempo Real</span>
-      </div>
-      
-      <div class="connection-status">
-        <div class="status-indicator">
-          <div class="status-dot" id="statusDot"></div>
-          <span class="status-text" id="statusText">Desconectado</span>
+    <div class="container">
+        <div class="sidebar" id="sidebar" style="display: none;">
+            <div class="logo">
+                <h1>AxiaFeed Pro</h1>
+                <span>Inteligência de Mercado em Tempo Real</span>
+            </div>
+
+            <div class="connection-status">
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span class="status-text" id="statusText">Desconectado</span>
+                </div>
+                <div class="ping-indicator">
+                    <span class="ping-label">Ping: </span>
+                    <span class="status-dot" id="pingDot"></span>
+                    <span class="ping-value" id="pingValue">-- ms</span>
+                </div>
+            </div>
         </div>
-        <div class="ping-value">Ping: <span id="pingValue">-- ms</span></div>
-      </div>
+
+        <div class="main-content">
+            <div id="loginDiv">
+                <div class="login-container">
+                    <div class="login-header">
+                        <h1>AxiaFeed Pro</h1>
+                        <p>Acesse seu painel de inteligência de negociação em tempo real</p>
+                    </div>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="username">Usuário</label>
+                            <input type="text" id="username" class="form-control" placeholder="Digite seu usuário" required>
+                        </div>
+
+                        <div class="form-group">
+                          <label for="password">Senha</label>
+                          <div class="password-wrapper">
+                              <input type="password" id="password" class="form-control" placeholder="Digite sua senha" required>
+                              <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar senha">
+                                  <img src="assets/images/olho-fechado.png" alt="Ícone de senha oculta" id="passwordIcon">
+                              </button>
+                          </div>
+                        </div>
+
+                        <div class="error-message" id="loginError"></div>
+                        <div class="loading-indicator" id="loadingIndicator">
+                            <div>Autenticando...</div>
+                        </div>
+
+                        <button type="submit" class="btn" id="loginButton">Entrar</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="feedDiv" class="feed-container">
+                <div class="dashboard-header">
+                    <div class="dashboard-title">
+                        <h1>AxiaFeed Pro Dashboard</h1>
+                        <p>Notícias e análises em tempo real para traders profissionais</p>
+                    </div>
+                    <button class="theme-toggle" id="themeToggle">Modo Escuro</button>
+                </div>
+
+                <div class="news-feed">
+                    <div class="news-header">
+                        <h2>Notícias do Mercado ao Vivo</h2>
+                        <div class="news-controls">
+                            <button class="control-btn" id="pauseButton" disabled>Pausar</button>
+                            <button class="control-btn" id="resumeButton" disabled>Retomar</button>
+                            <button class="control-btn" id="stopButton" disabled>Parar</button>
+                        </div>
+                    </div>
+
+                    <div class="news-content" id="mensagens">
+                        <div class="news-placeholder" id="newsPlaceholder">Aguardando notícias...</div>
+                    </div>
+
+                    <div style="padding: 15px 20px; border-top: 1px solid var(--border-color);">
+                        <div class="volume-control">
+                            <label for="volumeControl">Volume:</label>
+                            <input type="range" id="volumeControl" class="volume-slider" min="0" max="1" step="0.1" value="1">
+                            <span class="volume-percent" id="volumeValue">100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2>Desempenho de PnL (Profit & Loss)</h2>
+                        <p>Lucros e perdas em tempo real em suas posições</p>
+                    </div>
+                    <div class="chart-isolation">
+                        <div class="chart-wrapper">
+                            <canvas id="pnlChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pnl-list">
+                    <h2>Resumo de Posições</h2>
+                    <ul class="pnl-items" id="pnlList"></ul>
+                </div>
+            </div>
+        </div>
     </div>
-    
-    <!-- Conteúdo Principal -->
-    <div class="main-content">
-      <!-- Formulário de Login -->
-      <div id="loginDiv">
-        <div class="login-container">
-          <div class="login-header">
-            <h1>AxiaFeed Pro</h1>
-            <p>Acesse seu painel de inteligência de negociação em tempo real</p>
-          </div>
-          <form id="loginForm">
-            <div class="form-group">
-              <label for="username">Usuário</label>
-              <input type="text" id="username" class="form-control" placeholder="Digite seu usuário" required>
-            </div>
-            
-            <div class="form-group">
-              <label for="password">Senha</label>
-              <div class="password-wrapper">
-                <input type="password" id="password" class="form-control" placeholder="Digite sua senha" required>
-                <span class="toggle-password" id="togglePassword">👁️</span>
-              </div>
-            </div>
-            
-            <div class="error-message" id="loginError"></div>
-            <div class="loading-indicator" id="loadingIndicator">
-              <div>Autenticando...</div>
-            </div>
-            
-            <button type="submit" class="btn" id="loginButton">Entrar</button>
-          </form>
-        </div>
-      </div>
-      
-      <!-- Conteúdo do Feed (visível após login) -->
-      <div id="feedDiv" class="feed-container">
-        <div class="dashboard-header">
-          <div class="dashboard-title">
-            <h1>AxiaFeed Pro Dashboard</h1>
-            <p>Notícias e análises em tempo real para traders profissionais</p>
-          </div>
-          <button class="theme-toggle" id="themeToggle">Modo Escuro</button>
-        </div>
-        
-        <div class="news-feed">
-          <div class="news-header">
-            <h2>Notícias do Mercado ao Vivo</h2>
-            <div class="news-controls">
-              <button class="control-btn" id="pauseButton" disabled>Pausar</button>
-              <button class="control-btn" id="resumeButton" disabled>Retomar</button>
-              <button class="control-btn" id="stopButton" disabled>Parar</button>
-            </div>
-          </div>
-          
-          <div class="news-content" id="mensagens">
-            <div class="news-placeholder" id="newsPlaceholder">Aguardando notícias...</div>
-          </div>
-          
-          <div style="padding: 15px 20px; border-top: 1px solid var(--border-color);">
-            <div class="volume-control">
-              <label for="volumeControl">Volume:</label>
-              <input type="range" id="volumeControl" class="volume-slider" min="0" max="1" step="0.1" value="1">
-              <span class="volume-percent" id="volumeValue">100%</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="chart-container">
-          <div class="chart-header">
-            <h2>Desempenho de PnL</h2>
-            <p>Lucros e perdas em tempo real em suas posições</p>
-          </div>
-          <div class="chart-isolation">
-            <div class="chart-wrapper">
-              <canvas id="pnlChart"></canvas>
-            </div>
-          </div>
-        </div>
-        
-        <div class="pnl-list">
-          <h2>Resumo de Posições</h2>
-          <ul class="pnl-items" id="pnlList"></ul>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script src="assets/js/script.js"></script>
+
+    <script src="assets/js/script.js"></script>
 </body>
 </html>
