@@ -1,21 +1,20 @@
 # Desafio Tecnico Axia
-Aplicação desktop desenvolvida utilizando **Electron**, **Node.js**, **WebSocket**, **JavaScript**, **HTML** e **CSS**.
-
 
 ## Descrição
-Projeto com objetivo de criar uma aplicação desktop de comunicação em tempo real via WebSocket. O aplicativo inclui autenticação via login, um feed de noticias recebido por WebSocket e um leitor de texto básico com controle de volume (Text-to-Speech). 
+Desenvolvimento de um aplicativo desktop de comunicação em tempo real. O aplicativo inclui autenticação via login, um feed de noticias recebido por WebSocket e um leitor de texto básico com controle de volume (Text-to-Speech). 
 
 
 ## 1. Tecnologias Utilizadas
 - **Electron**: Framework para criação de aplicações desktop multiplataforma.
-- **Node.js**: Plataforma para execução de código JavaScript no servidor.
+- **NodeJS**: Plataforma para execução de código JavaScript no servidor.
 - **WebSocket**: Comunicação em tempo real entre cliente e servidor.
+- **SpeechSynthesis**: API nativa do JavaScript que permite a síntese de voz (conversão de texto em fala, ou text-to-speech)
 - **JavaScript**, **HTML** e **CSS**: Desenvolvimento da interface e lógica da aplicação.
 
 
 ## 2. Pré-requisitos
 Antes de iniciar o projeto, certifique-se de ter instalado:
-- **Node.js**: [Baixar aqui](https://nodejs.org/)
+- **NodeJS**: [Baixar aqui](https://nodejs.org/)
 - **npm**: Gerenciador de pacotes do Node.js (já incluso na instalação do Node.js).
 
 
@@ -40,17 +39,28 @@ npm install
 npm start
 ```
 
-## 4. Download e instalação
-- 4.1 (Adicionar)
+## 4. Instalação
+- 4.1 Faça o download e instale o arquivo "Desafio Tecnico Axia Setup 1.0.0"
+
+- 4.2 Por padrão o arquivo é instaldo no caminho:
+```bash
+C:\Users\<SeuUsuario>\AppData\Local\Programs\desafiotecnicoaxia
+```
 
 ## 5. Acessos
 - Login: user
 - Password: pass123
 
 ## 6. Controle de Versões
-- **v0.1**: Versão inicial funcional.
+- O desenvolvimento seguiu GitFlow com as branchs develop e main, porem não foi necessário criar tags.
 
 ## 7. Screenshots
 
-- 7.1 Tela Principal
-![Tela Principal](./screenshots/tela-principal.png)
+- 7.1 Login
+![Tela Principal](./screenshots/login.png)
+
+- 7.2 Feed de Noticias com Text-to-Speech
+![Tela Principal](./screenshots/telainicial-dashboard.png)
+
+- 7.3 Grafico PnL e Resumo de Posições
+![Tela Principal](./screenshots/telainicial-grafico+posicoes.png)
