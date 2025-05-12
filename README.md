@@ -39,6 +39,11 @@ npm install
 npm start
 ```
 
+- 3.5 Gerar arquivo executavel (Instalador)
+```bash
+npm run dist
+```
+
 ## 4. Instalação
 - 4.1 Faça o download e instale o arquivo "Desafio Tecnico Axia Setup 1.0.0"
 
